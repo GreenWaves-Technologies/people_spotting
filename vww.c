@@ -16,36 +16,18 @@
 #define __XSTR(__s) __STR(__s)
 #define __STR(__s) #__s
 
-#ifdef __EMUL__
-#ifdef PERF
-#undef PERF
-#endif
-#endif
-
 #define AT_INPUT_SIZE (AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS)
-
-#ifndef STACK_SIZE
-#define STACK_SIZE     2048 
-#endif
 
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 
-#ifdef __EMUL__
-  #include <sys/types.h>
-  #include <unistd.h>
-  #include <sys/stat.h>
-  #include <fcntl.h>
-  #include <sys/param.h>
-  #include <string.h>
-  #ifndef TENSOR_DUMP_FILE
-    #define TENSOR_DUMP_FILE "tensor_dump_file.dat"
-  #endif
-#endif
+
 
 // Softmax always outputs Q15 short int even from 8 bit input
 L2_MEM short int *ResOut;
 typedef signed char IMAGE_IN_T;
 L2_MEM IMAGE_IN_T *ImageIn;
+unsigned char Input_1[AT_INPUT_SIZE];
+
 
 #ifdef PERF
 L2_MEM rt_perf_t *cluster_perf;
@@ -59,7 +41,7 @@ static void RunNetwork()
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
-  __PREFIX(CNN)(ResOut);
+  __PREFIX(CNN)(Input_1,ResOut);
   printf("Runner completed\n");
 
   printf("\n");
@@ -73,33 +55,17 @@ static void RunNetwork()
   printf("\n");
 }
 
-#if defined(__EMUL__)
-int main(int argc, char *argv[]) 
-{
-  if (argc < 2) {
-    printf("Usage: %s [image_file]\n", argv[0]);
-    exit(1);
-  }
-  char *ImageName = argv[1];
-  if (dt_open_dump_file(TENSOR_DUMP_FILE)) {
-    printf("Failed to open tensor dump file %s.\n", TENSOR_DUMP_FILE);
-    exit(1);
-  }
-#else
+
 int start()
 {
   char *ImageName = __XSTR(AT_IMAGE);
   struct pi_device cluster_dev;
   struct pi_cluster_task *task;
   struct pi_cluster_conf conf;
-//  gv_vcd_configure(0, NULL);
-#endif
-
   //Input image size
 
   printf("Entering main controller\n");
 
-#ifndef __EMUL__
   pi_cluster_conf_init(&conf);
   pi_open_from_conf(&cluster_dev, (void *)&conf);
   pi_cluster_open(&cluster_dev);
@@ -110,11 +76,6 @@ int start()
   task->stack_size = STACK_SIZE;
   task->slave_stack_size = SLAVE_STACK_SIZE;
   task->arg = NULL;
-#endif
-
-  // Allocate some stacks for cluster in L1, rt_nb_pe returns how many cores exist.
-//  void *stacks = rt_alloc(RT_ALLOC_CL_DATA, STACK_SIZE*rt_nb_pe());
-//  if (stacks == NULL) return -1;
 
   printf("Constructor\n");
 
@@ -125,14 +86,16 @@ int start()
     return 1;
   }
 
-#ifndef NO_IMAGE
+#ifndef FROM_CAMERA
   printf("Reading image\n");
   //Reading Image from Bridge
-  if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)vww_L2_Memory, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), 1, 0)) {
+  if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
     printf("Failed to load image %s\n", ImageName);
     return 1;
   }
   printf("Finished reading image\n");
+#else
+
 #endif
 #ifdef PRINT_IMAGE
   for (int i=0; i<H; i++) {
@@ -160,17 +123,18 @@ int start()
   __PREFIX(CNN_Destruct)();
 
 #ifdef PERF
-	{
-		unsigned int TotalCycles = 0, TotalOper = 0;
-		printf("\n");
-		for (int i=0; i<(sizeof(AT_GraphPerf)/sizeof(unsigned int)); i++) {
-			printf("%45s: Cycles: %10d, Operations: %10d, Operations/Cycle: %f\n", AT_GraphNodeNames[i], AT_GraphPerf[i], AT_GraphOperInfosNames[i], ((float) AT_GraphOperInfosNames[i])/ AT_GraphPerf[i]);
-			TotalCycles += AT_GraphPerf[i]; TotalOper += AT_GraphOperInfosNames[i];
-		}
-		printf("\n");
-		printf("%45s: Cycles: %10d, Operations: %10d, Operations/Cycle: %f\n", "Total", TotalCycles, TotalOper, ((float) TotalOper)/ TotalCycles);
-		printf("\n");
-	}
+  {
+    unsigned int TotalCycles = 0, TotalOper = 0;
+    printf("\n");
+    for (int i=0; i<(sizeof(AT_GraphPerf)/sizeof(unsigned int)); i++) {
+      printf("%45s: Cycles: %10d, Operations: %10d, Operations/Cycle: %f\n", AT_GraphNodeNames[i],
+             AT_GraphPerf[i], AT_GraphOperInfosNames[i], ((float) AT_GraphOperInfosNames[i])/ AT_GraphPerf[i]);
+      TotalCycles += AT_GraphPerf[i]; TotalOper += AT_GraphOperInfosNames[i];
+    }
+    printf("\n");
+    printf("%45s: Cycles: %10d, Operations: %10d, Operations/Cycle: %f\n", "Total", TotalCycles, TotalOper, ((float) TotalOper)/ TotalCycles);
+    printf("\n");
+  }
 #endif
 
 #ifdef __EMUL__

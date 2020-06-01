@@ -1,16 +1,11 @@
-set debug on
-#weight_equalization 0.001
+set debug true
 adjust
-fusions 
-set input_norm_func "x: (x>>1)/128"
-set input_divisor 1
-set input_offset 0
-set l2_ram_ext_managed false
-# set dump_tensors 1
-aquant -f 8 images/*.ppm -T
-qtune 65 out 6 10 
-nodeoption * ENABLEIM2COL 1
-nodeoption 0 ALLOCATE 1
+fusions --scale8
+set input_norm_func "x: x/128-1"
+imageformat input_1 rgb565_rgb888 offset_int8
+set l2_ram_ext_managed true
+#nodeoption input_1 ALLOCATE 1
+#nodeoption output_1 ALLOCATE 1
 set graph_reorder_constant_in true
 set graph_produce_node_names true
 set graph_produce_operinfos true
