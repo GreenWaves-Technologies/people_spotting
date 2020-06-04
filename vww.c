@@ -114,11 +114,7 @@ int start()
 
   printf("Call cluster\n");
   // Execute the function "RunNetwork" on the cluster.
-#ifdef __EMUL__
-  RunNetwork(NULL);
-#else
   pi_cluster_send_task_to_cl(&cluster_dev, task);
-#endif
   
   __PREFIX(CNN_Destruct)();
 
@@ -137,19 +133,13 @@ int start()
   }
 #endif
 
-#ifdef __EMUL__
-  dt_close_dump_file();
-#else
   pmsis_exit(0);
-#endif
 
   printf("Ended\n");
   return 0;
 }
 
-#ifndef __EMUL__
 int main(void)
 {
   return pmsis_kickoff((void *) start);
 }
-#endif
