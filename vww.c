@@ -11,7 +11,8 @@
 
 #include "vww.h"
 #include "vwwKernels.h"
-#include "ImgIO.h"
+#include "gaplib/ImgIO.h"
+
 
 #define __XSTR(__s) __STR(__s)
 #define __STR(__s) #__s
@@ -21,17 +22,11 @@
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 
 
-
 // Softmax always outputs Q15 short int even from 8 bit input
 L2_MEM short int *ResOut;
 typedef signed char IMAGE_IN_T;
 L2_MEM IMAGE_IN_T *ImageIn;
 unsigned char Input_1[AT_INPUT_SIZE];
-
-
-#ifdef PERF
-L2_MEM rt_perf_t *cluster_perf;
-#endif
 
 static void RunNetwork()
 {
@@ -45,14 +40,7 @@ static void RunNetwork()
   printf("Runner completed\n");
 
   printf("\n");
-  
-  //Checki Results
-  if (ResOut[1] > ResOut[0]) {
-    printf("person seen (%d, %d)\n", ResOut[0], ResOut[1]);
-  } else {
-    printf("no person seen (%d, %d)\n", ResOut[0], ResOut[1]);
-  }
-  printf("\n");
+
 }
 
 
@@ -68,22 +56,28 @@ int start()
 
   pi_cluster_conf_init(&conf);
   pi_open_from_conf(&cluster_dev, (void *)&conf);
-  pi_cluster_open(&cluster_dev);
-//  pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
+  if (pi_cluster_open(&cluster_dev))
+  {
+    printf("Cluster open failed !\n");
+    pmsis_exit(-7);
+  }
+
+  //pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
+  //pi_freq_set(PI_FREQ_DOMAIN_FC,250000000);
   task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
   memset(task, 0, sizeof(struct pi_cluster_task));
   task->entry = &RunNetwork;
   task->stack_size = STACK_SIZE;
   task->slave_stack_size = SLAVE_STACK_SIZE;
   task->arg = NULL;
-
+  
   printf("Constructor\n");
 
   // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
   if (__PREFIX(CNN_Construct)())
   {
     printf("Graph constructor exited with an error\n");
-    return 1;
+    pmsis_exit(-1);
   }
 
 #ifndef FROM_CAMERA
@@ -91,7 +85,7 @@ int start()
   //Reading Image from Bridge
   if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
     printf("Failed to load image %s\n", ImageName);
-    return 1;
+    pmsis_exit(-1);
   }
   printf("Finished reading image\n");
 #else
@@ -105,11 +99,10 @@ int start()
     printf("\n");
   }
 #endif
-  ResOut = (short int *) AT_L2_ALLOC(0, 2*sizeof(short int));
-
+  ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
   if (ResOut==0) {
     printf("Failed to allocate Memory for Result (%ld bytes)\n", 2*sizeof(short int));
-    return 1;
+    pmsis_exit(-1);
   }
 
   printf("Call cluster\n");
@@ -132,6 +125,15 @@ int start()
     printf("\n");
   }
 #endif
+
+
+  if (ResOut[1] > ResOut[0]) {
+    printf("person seen (%d, %d)\n", ResOut[0], ResOut[1]);
+  } else {
+    printf("no person seen (%d, %d)\n", ResOut[0], ResOut[1]);
+  }
+
+  pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
 
   pmsis_exit(0);
 
