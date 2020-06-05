@@ -20,13 +20,15 @@
 #define AT_INPUT_SIZE (AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS)
 
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
+AT_HYPERRAM_T HyperRam;
+static uint32_t l3_buff;
 
 
 // Softmax always outputs Q15 short int even from 8 bit input
 L2_MEM short int *ResOut;
 typedef signed char IMAGE_IN_T;
 L2_MEM IMAGE_IN_T *ImageIn;
-unsigned char Input_1[AT_INPUT_SIZE];
+unsigned char *Input_1;
 
 static void RunNetwork()
 {
@@ -36,7 +38,7 @@ static void RunNetwork()
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
-  __PREFIX(CNN)(Input_1,ResOut);
+  __PREFIX(CNN)(l3_buff,ResOut);
   printf("Runner completed\n");
 
   printf("\n");
@@ -51,6 +53,41 @@ int start()
   struct pi_cluster_task *task;
   struct pi_cluster_conf conf;
   //Input image size
+  struct pi_hyperram_conf hyper_conf;
+  pi_hyperram_conf_init(&hyper_conf);
+  pi_open_from_conf(&HyperRam, &hyper_conf);
+  if (pi_ram_open(&HyperRam))
+  {
+    printf("Error ram open !\n");
+    pmsis_exit(-3);
+  }
+
+  if (pi_ram_alloc(&HyperRam, &l3_buff, (uint32_t) AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS))
+  {
+    printf("Ram malloc failed !\n");
+    pmsis_exit(-4);
+  }
+
+  #ifndef FROM_CAMERA
+    Input_1=(unsigned char *)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS);
+    printf("Reading image\n");
+    //Reading Image from Bridge
+    if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
+      printf("Failed to load image %s\n", ImageName);
+      pmsis_exit(-1);
+    }
+    
+    pi_ram_write(&HyperRam, (l3_buff), Input_1, (uint32_t)AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS);
+
+    pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS);
+
+    printf("Finished reading image\n");
+
+  #else
+
+  #endif
+
+
 
   printf("Entering main controller\n");
 
@@ -62,8 +99,6 @@ int start()
     pmsis_exit(-7);
   }
 
-  //pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
-  //pi_freq_set(PI_FREQ_DOMAIN_FC,250000000);
   task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
   memset(task, 0, sizeof(struct pi_cluster_task));
   task->entry = &RunNetwork;
@@ -79,18 +114,6 @@ int start()
     printf("Graph constructor exited with an error\n");
     pmsis_exit(-1);
   }
-
-#ifndef FROM_CAMERA
-  printf("Reading image\n");
-  //Reading Image from Bridge
-  if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
-    printf("Failed to load image %s\n", ImageName);
-    pmsis_exit(-1);
-  }
-  printf("Finished reading image\n");
-#else
-
-#endif
 #ifdef PRINT_IMAGE
   for (int i=0; i<H; i++) {
     for (int j=0; j<W; j++) {
@@ -104,7 +127,8 @@ int start()
     printf("Failed to allocate Memory for Result (%ld bytes)\n", 2*sizeof(short int));
     pmsis_exit(-1);
   }
-
+  pi_freq_set(PI_FREQ_DOMAIN_FC,250000000);
+  pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
   printf("Call cluster\n");
   // Execute the function "RunNetwork" on the cluster.
   pi_cluster_send_task_to_cl(&cluster_dev, task);
