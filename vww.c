@@ -23,6 +23,7 @@
 #define __STR(__s) #__s
 
 #define AT_INPUT_SIZE (AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS)
+#define PIXEL_SIZE 2
 
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 
@@ -34,7 +35,7 @@ static struct pi_device camera;
 
 // Softmax always outputs Q15 short int even from 8 bit input
 PI_L2 short int *ResOut;
-unsigned char Input_1[AT_INPUT_SIZE];
+uint8_t *Input_1;
 
 static int open_camera(struct pi_device *device)
 {
@@ -98,13 +99,13 @@ int start()
     struct pi_device cluster_dev;
     struct pi_cluster_task *task;
     struct pi_cluster_conf conf;
-
+    char result_out[30];
     unsigned int W = 238, H = 208;
     unsigned int Wcam=238, Hcam=208;
     
     //Input image size
     printf("Entering main controller\n");
-    pi_freq_set(PI_FREQ_DOMAIN_FC,50000000);
+    //pi_freq_set(PI_FREQ_DOMAIN_FC,50000000);
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -112,10 +113,14 @@ int start()
         pmsis_exit(-1);
     }
 
+    //allocating input
+    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
+
 #ifndef FROM_CAMERA
     printf("Reading image\n");
     //Reading Image from Bridge
-    if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, (char *)Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
+     img_io_out_t type = IMGIO_OUTPUT_RGB565;
+    if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE*PIXEL_SIZE, type, 0)) {
         printf("Failed to load image %s\n", ImageName);
         pmsis_exit(-1);
     }
@@ -193,25 +198,25 @@ int start()
 
         #endif
 
-
-        //printf("Call cluster\n");
         // Execute the function "RunNetwork" on the cluster.
         pi_cluster_send_task_to_cl(&cluster_dev, task);
 
         #ifndef FROM_CAMERA
         
         if (ResOut[1] > ResOut[0]) {
-            printf("person seen (%d, %d)\n", ResOut[0], ResOut[1]);
+            printf("person seen (%f, %f)\n", FIX2FP(ResOut[0],15), FIX2FP(ResOut[1],15));
         } else {
-            printf("no person seen (%d, %d)\n", ResOut[0], ResOut[1]);
+            printf("no person seen (%f, %f)\n", FIX2FP(ResOut[0],15), FIX2FP(ResOut[1],15));
         }
 
         #else
         pi_display_write(&ili, &buffer, 41,20, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
         if (ResOut[1] > ResOut[0]) 
-            draw_text(&ili, "Person seen", 40, 218, 2);
+            sprintf(result_out,"Person seen (%f)",FIX2FP(ResOut[1],15));
+            draw_text(&ili, result_out, 40, 218, 2);
         else
-            draw_text(&ili, "No person seen", 40, 218, 2);
+            sprintf(result_out,"Person seen (%f)",FIX2FP(ResOut[0],15));
+            draw_text(&ili, result_out, 40, 218, 2);
         #endif
     }
 
@@ -232,13 +237,10 @@ int start()
     }
 #endif
 
-    
-
     pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
-
-    pmsis_exit(0);
-
+    pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
     printf("Ended\n");
+    pmsis_exit(0);
     return 0;
 }
 

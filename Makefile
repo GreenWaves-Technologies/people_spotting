@@ -16,9 +16,7 @@ IMAGE=$(CURDIR)/images/COCO_val2014_000000174838_1.ppm
 #SILENT=1
 
 ## Enable image grub from camera and disaply output to lcd
-FROM_CAMERA=1
-
-
+#FROM_CAMERA=1
 
 io=host
 
