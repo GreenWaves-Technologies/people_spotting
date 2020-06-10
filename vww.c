@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include "pmsis.h"
-#include "pmsis.h"
 #include "bsp/bsp.h"
 #include "bsp/camera.h"
 #include "bsp/camera/gc0308.h"
@@ -211,12 +210,14 @@ int start()
 
         #else
         pi_display_write(&ili, &buffer, 41,20, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
-        if (ResOut[1] > ResOut[0]) 
+        if (ResOut[1] > ResOut[0]) {
             sprintf(result_out,"Person seen (%f)",FIX2FP(ResOut[1],15));
             draw_text(&ili, result_out, 40, 218, 2);
-        else
-            sprintf(result_out,"Person seen (%f)",FIX2FP(ResOut[0],15));
+            }
+        else{
+            sprintf(result_out,"No person seen (%f)",FIX2FP(ResOut[0],15));
             draw_text(&ili, result_out, 40, 218, 2);
+        }
         #endif
     }
 
