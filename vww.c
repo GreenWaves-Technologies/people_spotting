@@ -32,6 +32,11 @@ static pi_buffer_t buffer;
 
 static struct pi_device camera;
 
+#if SILENT
+#define PRINTF(...) ((void) 0)
+#else
+#define PRINTF printf
+#endif
 // Softmax always outputs Q15 short int even from 8 bit input
 PI_L2 short int *ResOut;
 uint8_t *Input_1;
@@ -78,17 +83,13 @@ void draw_text(struct pi_device *display, const char *str, unsigned posX, unsign
 
 static void RunNetwork()
 {
-  //printf("Running on cluster\n");
+  PRINTF("Running on cluster\n");
 #ifdef PERF
-  printf("Start timer\n");
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
   __PREFIX(CNN)((unsigned short*)Input_1,ResOut);
-  //printf("Runner completed\n");
-
-  //printf("\n");
-
+  PRINTF("Runner completed\n");
 }
 
 
@@ -103,8 +104,8 @@ int start()
     unsigned int Wcam=238, Hcam=208;
     
     //Input image size
-    printf("Entering main controller\n");
-    //pi_freq_set(PI_FREQ_DOMAIN_FC,50000000);
+    PRINTF("Entering main controller\n");
+    pi_freq_set(PI_FREQ_DOMAIN_FC,100000000);
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -116,14 +117,14 @@ int start()
     Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
 
 #ifndef FROM_CAMERA
-    printf("Reading image\n");
+    PRINTF("Reading image\n");
     //Reading Image from Bridge
      img_io_out_t type = IMGIO_OUTPUT_RGB565;
     if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE*PIXEL_SIZE, type, 0)) {
         printf("Failed to load image %s\n", ImageName);
         pmsis_exit(-1);
     }
-    printf("Finished reading image\n");
+    PRINTF("Finished reading image\n");
 #else
 
     if (open_display(&ili))
@@ -168,7 +169,7 @@ int start()
     task->slave_stack_size = SLAVE_STACK_SIZE;
     task->arg = NULL;
     
-    printf("Constructor\n");
+    PRINTF("Constructor\n");
     // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
     if (__PREFIX(CNN_Construct)())
     {
@@ -178,7 +179,7 @@ int start()
 
     pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
 
-    printf("Application main cycle\n");
+    PRINTF("Application main cycle\n");
     int iter=1;
     while(iter){
 
@@ -188,6 +189,7 @@ int start()
 
             pi_task_t task_1;
             pi_task_t task_2;
+            //We need to calls since uDMA max transfer is 128KB
             pi_camera_capture_async(&camera, Input_1, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
             pi_camera_capture_async(&camera, Input_1+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
             pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
@@ -203,9 +205,9 @@ int start()
         #ifndef FROM_CAMERA
         
         if (ResOut[1] > ResOut[0]) {
-            printf("person seen (%f, %f)\n", FIX2FP(ResOut[0],15), FIX2FP(ResOut[1],15));
+            PRINTF("person seen! confidence %f\n", FIX2FP(ResOut[1],15));
         } else {
-            printf("no person seen (%f, %f)\n", FIX2FP(ResOut[0],15), FIX2FP(ResOut[1],15));
+            PRINTF("no person seen %f\n", FIX2FP(ResOut[0],15));
         }
 
         #else
@@ -240,7 +242,7 @@ int start()
 
     pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
     pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
-    printf("Ended\n");
+    PRINTF("Ended\n");
     pmsis_exit(0);
     return 0;
 }

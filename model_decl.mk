@@ -24,6 +24,13 @@ endif
 MODEL_PYTHON=python
 NNTOOL_PATH = $(GAP_SDK_HOME)/tools/nntool
 
+USE_DISP?=1
+ifdef USE_DISP
+  SDL_FLAGS= -lSDL2_ttf -LSDL2_image -lSDL2 
+else
+  SDL_FLAGS=
+endif
+
 # Increase this to improve accuracy
 MODEL_COMMON ?= common
 MODEL_COMMON_INC ?= $(MODEL_COMMON)/src
