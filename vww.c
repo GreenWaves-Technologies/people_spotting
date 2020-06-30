@@ -14,6 +14,7 @@
 #include "bsp/camera/gc0308.h"
 #include "bsp/display/ili9341.h"
 #include "vww.h"
+#include "vwwInfo.h"
 #include "vwwKernels.h"
 #include "gaplib/ImgIO.h"
 
@@ -105,7 +106,7 @@ int start()
     
     //Input image size
     PRINTF("Entering main controller\n");
-    pi_freq_set(PI_FREQ_DOMAIN_FC,100000000);
+    pi_freq_set(PI_FREQ_DOMAIN_FC,50000000);
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -149,7 +150,7 @@ int start()
         printf("Failed to open camera\n");
         pmsis_exit(-1);
     }
-    pi_camera_set_crop(&camera,160,120,AT_INPUT_WIDTH,AT_INPUT_HEIGHT);
+    pi_camera_set_crop(&camera,(320-AT_INPUT_WIDTH)/2,(240-AT_INPUT_HEIGHT)/2,AT_INPUT_WIDTH,AT_INPUT_HEIGHT);
 
     
 #endif
@@ -202,22 +203,26 @@ int start()
         // Execute the function "RunNetwork" on the cluster.
         pi_cluster_send_task_to_cl(&cluster_dev, task);
 
+
+        float person_not_seen = FIX2FP(gap_roundnorm(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM),8);    
+        float person_seen = FIX2FP(gap_roundnorm(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM),8);    
+        
         #ifndef FROM_CAMERA
         
-        if (ResOut[1] > ResOut[0]) {
-            PRINTF("person seen! confidence %f\n", FIX2FP(ResOut[1],15));
+        if (person_seen > person_not_seen) {
+            PRINTF("person seen! confidence %f\n", person_seen);
         } else {
-            PRINTF("no person seen %f\n", FIX2FP(ResOut[0],15));
+            PRINTF("no person seen %f\n", person_not_seen);
         }
 
         #else
         pi_display_write(&ili, &buffer, 41,20, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
-        if (ResOut[1] > ResOut[0]) {
-            sprintf(result_out,"Person seen (%f)",FIX2FP(ResOut[1],15));
+        if (person_seen > person_not_seen) {
+            sprintf(result_out,"Person seen (%f)",person_seen);
             draw_text(&ili, result_out, 40, 218, 2);
             }
         else{
-            sprintf(result_out,"No person seen (%f)",FIX2FP(ResOut[0],15));
+            sprintf(result_out,"No person seen (%f)",person_not_seen);
             draw_text(&ili, result_out, 40, 218, 2);
         }
         #endif

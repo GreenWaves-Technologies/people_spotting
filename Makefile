@@ -13,10 +13,10 @@ include common.mk
 IMAGE=$(CURDIR)/images/COCO_val2014_000000174838_1.ppm
 
 ## Mute printf in source code
-#SILENT=1
+SILENT=1
 
 ## Enable image grub from camera and disaply output to lcd
-#FROM_CAMERA=1
+FROM_CAMERA=1
 
 io=host
 
