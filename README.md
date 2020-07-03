@@ -1,4 +1,4 @@
-# People Spotting Demo
+# People Spotting
 
 This is an implementation of the visual wake words challenge winner at https://github.com/mit-han-lab/VWW.
 
