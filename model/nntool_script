@@ -2,13 +2,9 @@ set debug true
 adjust
 fusions --scale8
 set input_norm_func "x: x/128-1"
-imageformat input_1 rgb888 offset_int8
+#imageformat input_1 rgb565 offset_int8
+imageformat input_1 rgb565_rgb888 offset_int8
 set l2_ram_ext_managed false
-set l3_ram_ext_managed true
-set default_input_exec_location "AT_MEM_L3_HRAM"
-set default_input_home_location "AT_MEM_L3_HRAM"
-set default_output_exec_location "AT_MEM_L2"
-set default_output_home_location "AT_MEM_L2"
 set graph_reorder_constant_in true
 set graph_produce_node_names true
 set graph_produce_operinfos true
