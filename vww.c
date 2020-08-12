@@ -16,7 +16,7 @@
 #include "vww.h"
 #include "vwwInfo.h"
 #include "vwwKernels.h"
-#include "gaplib/ImgIO.h"
+#include "ImgIO.h"
 
 
 #define __XSTR(__s) __STR(__s)
@@ -204,9 +204,8 @@ int start()
         // Execute the function "RunNetwork" on the cluster.
         pi_cluster_send_task_to_cl(&cluster_dev, task);
 
-
-        float person_not_seen = FIX2FP(gap_roundnorm(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM),8);    
-        float person_seen = FIX2FP(gap_roundnorm(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM),8);    
+        float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+        float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
         
         #ifndef FROM_CAMERA
         
