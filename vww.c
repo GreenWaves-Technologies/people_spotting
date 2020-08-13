@@ -25,6 +25,11 @@
 #define AT_INPUT_SIZE (AT_INPUT_WIDTH*AT_INPUT_HEIGHT*AT_INPUT_COLORS)
 #define PIXEL_SIZE 2
 
+typedef struct{
+    unsigned short* in;
+    unsigned short* out;
+} cluster_arg_t;
+
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 AT_HYPERRAM_T HyperRam;
 static uint32_t l3_buff;
@@ -46,7 +51,7 @@ uint8_t *Input_1;
 
 static int open_camera(struct pi_device *device)
 {
-    printf("Opening GC0308 camera\n");
+    PRINTF("Opening GC0308 camera\n");
     struct pi_gc0308_conf cam_conf;
     pi_gc0308_conf_init(&cam_conf);
 
@@ -83,17 +88,16 @@ void draw_text(struct pi_device *display, const char *str, unsigned posX, unsign
     writeText(display, str, fontsize);
 }
 
-static void RunNetwork()
+static void RunNetwork(cluster_arg_t*arg)
 {
   PRINTF("Running on cluster\n");
 #ifdef PERF
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
-  __PREFIX(CNN)((unsigned short*)Input_1,ResOut);
+  __PREFIX(CNN)(arg->in,arg->out);
   PRINTF("Runner completed\n");
 }
-
 
 int start()
 {
@@ -104,10 +108,14 @@ int start()
     char result_out[30];
     unsigned int W = 238, H = 208;
     unsigned int Wcam=238, Hcam=208;
+    pi_task_t task_1;
+    pi_task_t task_2;
+    cluster_arg_t arg;
+    pi_task_t wait_task;
     
     //Input image size
     PRINTF("Entering main controller\n");
-    pi_freq_set(PI_FREQ_DOMAIN_FC,50000000);
+    pi_freq_set(PI_FREQ_DOMAIN_FC,250000000);
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -115,10 +123,15 @@ int start()
         pmsis_exit(-1);
     }
 
+#ifndef FROM_CAMERA
     //allocating input
     Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
+    if (Input_1==0) {
+        printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
+        pmsis_exit(-1);
+    }
 
-#ifndef FROM_CAMERA
+
     PRINTF("Reading image\n");
     //Reading Image from Bridge
      img_io_out_t type = IMGIO_OUTPUT_RGB565;
@@ -128,6 +141,12 @@ int start()
     }
     PRINTF("Finished reading image\n");
 #else
+    //Allocate double the buffer for double buffering
+    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE *2);
+    if (Input_1==0) {
+        printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE*2);
+        pmsis_exit(-1);
+    }
 
     if (open_display(&ili))
     {
@@ -169,7 +188,7 @@ int start()
     task->entry = &RunNetwork;
     task->stack_size = STACK_SIZE;
     task->slave_stack_size = SLAVE_STACK_SIZE;
-    task->arg = NULL;
+    task->arg = &arg;
     
     PRINTF("Constructor\n");
     // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
@@ -182,51 +201,69 @@ int start()
     pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
 
     PRINTF("Application main cycle\n");
+    #ifdef FROM_CAMERA
+    pi_camera_capture_async(&camera, Input_1, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
+    pi_camera_capture_async(&camera, Input_1+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
+    pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
+    #endif
+
     int iter=1;
-    while(iter){
+    do{
 
         #ifndef FROM_CAMERA
-        iter=0;
+            iter=0;
+            arg.in=Input_1;
+            arg.out=ResOut;
         #else
-
-            pi_task_t task_1;
-            pi_task_t task_2;
-            //We need to calls since uDMA max transfer is 128KB
-            pi_camera_capture_async(&camera, Input_1, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
-            pi_camera_capture_async(&camera, Input_1+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
-            pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
             pi_task_wait_on(&task_1);
             pi_task_wait_on(&task_2);
             pi_camera_control(&camera, PI_CAMERA_CMD_STOP, 0);
-
+            //We need to calls since uDMA max transfer is 128KB
+            pi_camera_capture_async(&camera, Input_1 + (iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0), AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
+            pi_camera_capture_async(&camera, Input_1+(iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0)+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
+            pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
+            arg.in=Input_1+(iter%2?0:AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2);
+            arg.out=ResOut;
         #endif
-
+    
         // Execute the function "RunNetwork" on the cluster.
-        pi_cluster_send_task_to_cl(&cluster_dev, task);
+        pi_task_block(&wait_task);
+        pi_cluster_send_task_to_cl_async(&cluster_dev, task,&wait_task);
 
-        float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
-        float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
         
         #ifndef FROM_CAMERA
-        
+        pi_task_wait_on(&wait_task);
+        float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+        float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+
         if (person_seen > person_not_seen) {
             PRINTF("person seen! confidence %f\n", person_seen);
         } else {
             PRINTF("no person seen %f\n", person_not_seen);
         }
-
+        //Checks for jenkins:
+        if(ResOut[0] == 4982 && ResOut[1] ==  27785) { printf("Correct Results!\n");pmsis_exit(0);}
+        else { printf("Wrong Results!\n");pmsis_exit(-1);}
         #else
-        pi_display_write(&ili, &buffer, 41,20, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
-        if (person_seen > person_not_seen) {
+        buffer.data = arg.in;
+        //Write to image to LCD while processing NN on cluster
+        pi_display_write(&ili, &buffer, 41,16, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
+        //Wait Cluster to finish befor writing results to LCD
+        pi_task_wait_on(&wait_task);
+        float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+        float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+        if (person_seen > person_not_seen) 
+        {
             sprintf(result_out,"Person seen (%f)",person_seen);
-            draw_text(&ili, result_out, 40, 218, 2);
-            }
-        else{
+            draw_text(&ili, result_out, 40, 225, 2);
+        }
+        else
+        {
             sprintf(result_out,"No person seen (%f)",person_not_seen);
-            draw_text(&ili, result_out, 40, 218, 2);
+            draw_text(&ili, result_out, 40, 225, 2);
         }
         #endif
-    }
+    }while(iter++);
 
     __PREFIX(CNN_Destruct)();
 
