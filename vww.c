@@ -186,8 +186,8 @@ int start()
     task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
     memset(task, 0, sizeof(struct pi_cluster_task));
     task->entry = &RunNetwork;
-    task->stack_size = STACK_SIZE;
-    task->slave_stack_size = SLAVE_STACK_SIZE;
+    task->stack_size = CLUSTER_STACK_SIZE;
+    task->slave_stack_size = CLUSTER_SLAVE_STACK_SIZE;
     task->arg = &arg;
     
     PRINTF("Constructor\n");
