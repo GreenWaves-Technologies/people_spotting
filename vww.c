@@ -16,7 +16,7 @@
 #include "vww.h"
 #include "vwwInfo.h"
 #include "vwwKernels.h"
-#include "ImgIO.h"
+#include "gaplib/ImgIO.h"
 
 
 #define __XSTR(__s) __STR(__s)
@@ -115,7 +115,11 @@ int start()
     
     //Input image size
     PRINTF("Entering main controller\n");
-    pi_freq_set(PI_FREQ_DOMAIN_FC,250000000);
+    
+    #if !FREQ_FC==50
+    pi_freq_set(PI_FREQ_DOMAIN_FC,FREQ_FC*1000*1000);
+    #endif
+
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -198,7 +202,7 @@ int start()
         pmsis_exit(-1);
     }
 
-    pi_freq_set(PI_FREQ_DOMAIN_CL,175000000);
+    pi_freq_set(PI_FREQ_DOMAIN_CL,FREQ_CL*1000*1000);
 
     PRINTF("Application main cycle\n");
     #ifdef FROM_CAMERA
