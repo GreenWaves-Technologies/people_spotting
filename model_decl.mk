@@ -5,7 +5,6 @@
 # of the BSD license.  See the LICENSE file for details.
 
 MODEL_SUFFIX?=
-
 MODEL_PREFIX?=vww
 
 # The training of the model is slightly different depending on
@@ -32,15 +31,13 @@ else
 endif
 
 # Increase this to improve accuracy
-MODEL_COMMON ?= common
-MODEL_COMMON_INC ?= $(MODEL_COMMON)/src
-MODEL_COMMON_SRC ?= $(MODEL_COMMON)/src
-MODEL_COMMON_SRC_FILES ?=  #helpers.c #ImgIO.c
-MODEL_COMMON_SRCS = $(realpath $(addprefix $(MODEL_COMMON_SRC)/,$(MODEL_COMMON_SRC_FILES)))
-MODEL_TRAIN = model/train.py
+MODEL_COMMON?=common
+MODEL_COMMON_INC?=$(GAP_SDK_HOME)/libs/gap_lib/include
+MODEL_COMMON_SRC?=$(GAP_SDK_HOME)/libs/gap_lib/img_io
+MODEL_COMMON_SRC_FILES ?= ImgIO.c
+MODEL_COMMON_SRCS=$(realpath $(addprefix $(MODEL_COMMON_SRC)/,$(MODEL_COMMON_SRC_FILES)))
+
 MODEL_BUILD = BUILD_MODEL$(MODEL_SUFFIX)
-MODEL_TRAIN_BUILD = BUILD_TRAIN$(TRAIN_SUFFIX)
-MODEL_H5 = $(MODEL_TRAIN_BUILD)/$(MODEL_PREFIX).h5
 
 MODEL_TFLITE = $(MODEL_BUILD)/$(MODEL_PREFIX).tflite
 
