@@ -16,7 +16,7 @@ $(info Building emulation mode with 8 bit quantization)
 # the quantization. This is because in 8 bit mode we used signed
 # 8 bit so the input to the model needs to be shifted 1 bit
 
-NNTOOL_SCRIPT=../model/nntool_script
+NNTOOL_SCRIPT=../model/nntool_script_emul
 TRAINED_TFLITE_MODEL=../model/visual_wake_quant.tflite
 NNTOOL_EXTRA_FLAGS= -q
 
@@ -30,19 +30,16 @@ CC = gcc
 OPTIMIZATION?=-O3
 CFLAGS += -g -m32 $(OPTIMIZATION) -D__EMUL__ -DAT_MODEL_PREFIX=$(MODEL_PREFIX) $(MODEL_SIZE_CFLAGS) -DPERF
 INCLUDES +=   -I../ -I$(TILER_EMU_INC) -I$(TILER_INC)  # -I$(TILER_CNN_GENERATOR_PATH) -I$(TILER_CNN_KERNEL_PATH) -I$(TILER_CNN_KERNEL_PATH_SQ8)
-INCLUDES += $(CNN_LIB_INCLUDE) -I$(MODEL_COMMON_INC) -I$../$(MODEL_BUILD) #-I../$(MODEL_HEADERS) $(CNN_GEN_INCLUDE) -I/home/manuele/gap_sdk/libs/gap_lib/include 
+INCLUDES += $(CNN_LIB_INCLUDE) -I$(GAP_LIB_PATH)/include/ -I$../$(MODEL_BUILD) #-I../$(MODEL_HEADERS) $(CNN_GEN_INCLUDE) -I/home/manuele/gap_sdk/libs/gap_lib/include 
 LFLAGS =
 LIBS =
-SRCS = $(MAIN) $(MODEL_COMMON_SRCS) $(MODEL_SRCS) $(CNN_LIB) $(MODEL_GEN_C)
+SRCS = $(MAIN)  $(MODEL_SRCS) $(CNN_LIB) $(MODEL_GEN_C) $(GAP_LIB_PATH)/img_io/ImgIO.c
+
 
 $(info CNN_LIB++ $(CNN_LIB))
 $(info SRCS++ $(SRCS))
 
-#CFLAGS += -DAT_CONSTRUCT=$(AT_CONSTRUCT) -DAT_DESTRUCT=$(AT_DESTRUCT) -DAT_CNN=$(AT_CNN) -DAT_L3_ADDR=$(AT_L3_ADDR)
-#INCLUDES = -I../ -I$(TILER_EMU_INC) -I$(TILER_INC) 
-#LFLAGS =
-#LIBS =
-#SRCS += $(MAIN) $(MODEL_GEN_C) $(MODEL_COMMON_SRCS) $(CNN_LIB)
+
 
 BUILD_DIR=BUILD_EMUL
 OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(SRCS))

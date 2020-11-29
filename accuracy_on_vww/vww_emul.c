@@ -11,6 +11,7 @@
 
 #include "vwwKernels.h"
 #include "vww.h"
+#include "vwwInfo.h"
 
 #define __XSTR(__s) __STR(__s)
 #define __STR(__s) #__s
@@ -43,14 +44,6 @@ static void RunNetwork()
   printf("Runner completed Input_1(%p) Output_1(%p)\n", Input_1, Output_1);
 
   printf("\n");
-  
-  //Checki Results
-  if (Output_1[1] > Output_1[0]) {
-    printf("person seen (%d, %d)\n", Output_1[0], Output_1[1]);
-  } else {
-    printf("no person seen (%d, %d)\n", Output_1[0], Output_1[1]);
-  }
-  printf("\n");
 }
 
 int main(int argc, char *argv[]) 
@@ -77,6 +70,9 @@ int main(int argc, char *argv[])
   printf("Reading image Input_1(%p)\n", Input_1);
   //Reading Image from Bridge
   if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE*sizeof(IMAGE_IN_T), IMGIO_OUTPUT_CHAR, 0)) {
+  #define PIXEL_SIZE 2
+//  img_io_out_t type = IMGIO_OUTPUT_RGB565;
+//  if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE*PIXEL_SIZE, type, 0)) {
     printf("Failed to load image %s\n", ImageName);
     return 1;
   }
@@ -85,7 +81,26 @@ int main(int argc, char *argv[])
   printf("Call cluster Input_1(%p)\n", Input_1);
   // Execute the function "RunNetwork" on the cluster.
   RunNetwork(NULL);
-  
+
+  //Checki Results
+/*
+    float person_not_seen = FIX2FP(Output_1[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+    float person_seen = FIX2FP(Output_1[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
+
+    if (person_seen > person_not_seen) {
+        PRINTF("person seen confidence %f\n", person_seen);
+    } else {
+        PRINTF("no person seen %f\n", person_not_seen);
+    }
+*/    
+    
+  if (Output_1[1] > Output_1[0]) {
+    printf("person seen (%d, %d)\n", Output_1[0], Output_1[1]);
+  } else {
+    printf("no person seen (%d, %d)\n", Output_1[0], Output_1[1]);
+  }
+
+  printf("\n");
   __PREFIX(CNN_Destruct)();
 
   printf("Ended\n");

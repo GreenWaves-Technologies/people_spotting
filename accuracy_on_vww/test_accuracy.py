@@ -13,12 +13,16 @@ from pyvww.utils import VisualWakeWords
 parser = argparse.ArgumentParser()
 parser.add_argument('--tflite_model', type=str, default='../model/visual_wake_quant.tflite', 
                     help='Model to use for VWW.')
+parser.add_argument('--GAP', action='store_true', dest='GAP')
+
 parser.add_argument('--coco_dataset_path', type=str, default='', 
                     help='Path to COCO dataset')
 parser.add_argument('--vww_ann_file', type=str, default='visualwakewords/annotations/instances_val.json', 
                     help='Path to the VWW annotation file')
+
 args, unparsed = parser.parse_known_args()
 
+print(args.GAP)
 if args.coco_dataset_path == '':
     print('Error! Missing path to COCO')
     exit()
@@ -87,7 +91,8 @@ pred1 = 0
 class0 = 0
 class1 = 0
 print('Going to run validation over {} samples'.format(DATASET_LEN))
-for index in range(DATASET_LEN):
+executable = 'vww_emul'
+for index in range(DATASET_LEN):#DATASET_LEN
             
     img_id = ids[index]
     ann_ids = vww.getAnnIds(imgIds=img_id)
@@ -105,18 +110,34 @@ for index in range(DATASET_LEN):
     
     # preprocess
     img = preprocess_image(img, scale_factor=None, central_crop=False, W_out=w_tflite, H_out=h_tflite)
-    img = np.array(img)
-    #print(img.min(),img.max(),img.shape)
     
     #inference
-    interpreter.set_tensor(input_details[0]['index'], img.reshape(input_details[0]['shape']))
-    interpreter.invoke()
-    output = interpreter.get_tensor(output_details[0]['index'])
-    predicted_class = np.argmax(output)
+    if args.GAP == False:
+        img = np.array(img)
+        #print(img.min(),img.max(),img.shape)
+        interpreter.set_tensor(input_details[0]['index'], img.reshape(input_details[0]['shape']))
+        interpreter.invoke()
+        output = interpreter.get_tensor(output_details[0]['index'])
+        predicted_class = np.argmax(output)
     #print(predicted_class)
-    
-    # results
-    #print('Prediction:', predicted_class, 'target: ', target)
+    else:
+        predicted_class = -1
+        #print(img.s)
+        img = img.transpose(method=Image.FLIP_LEFT_RIGHT)#FLIP_TOP_BOTTOM)
+        img.save("test.ppm")
+        ex_stream = os.popen("./{} test.ppm".format(executable))
+        emul_log = ex_stream.readlines()
+        emul_prediction = None
+        for line in emul_log:
+#            print(line)
+            if 'no person seen' in line:
+                predicted_class = 0
+                break
+            elif 'person seen' in line:
+                predicted_class = 1
+                break               
+        
+#    print('Prediction:', predicted_class, 'target: ', target)
     
     if target==0:
         class0 += 1
@@ -137,4 +158,4 @@ for index in range(DATASET_LEN):
 
 # Print final results
 print('Class0:{}% ({}/{}) - Class1 {}% ({}/{}) '.format(100*accuracy_class0, pred0,class0,100*accuracy_class1,pred1,class1))
-print("The average accuracy is: ", 100*(accuracy_class0+accuracy_class1)/2, '% or' , avg_accuracy, '%' ) 
+print("The average accuracy is: ", 100*(accuracy_class0+accuracy_class1)/2, '% or' , 100*avg_accuracy, '%' ) 
