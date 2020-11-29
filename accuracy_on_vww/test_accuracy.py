@@ -3,22 +3,33 @@ from PIL import Image
 import os
 import tensorflow as tf
 import numpy as np
+import argparse
 
 sys.path.append('./visualwakewords')
 import pyvww
 from pyvww.utils import VisualWakeWords
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--tflite_model', type=str, default='../model/visual_wake_quant.tflite', 
+                    help='Model to use for VWW.')
+parser.add_argument('--coco_dataset_path', type=str, default='', 
+                    help='Path to COCO dataset')
+parser.add_argument('--vww_ann_file', type=str, default='visualwakewords/annotations/instances_val.json', 
+                    help='Path to the VWW annotation file')
+args, unparsed = parser.parse_known_args()
+
+if args.coco_dataset_path == '':
+    print('Error! Missing path to COCO')
+    exit()
+    
+#print(args.coco_dataset_path, args.vww_ann_file, args.tflite_model)
+
+
 # Configurable Parameters
-ANNOTATION_FILE_PATH=sys.argv[1] # '/home/rusci/Work/GWT/people_spotting/accuracy_on_vww/visualwakewords/annotations/instances_val.json'
-COCO_PATH=sys.argv[2] #'/home/rusci/Dataset/coco/val2014/'
-#TFLITE_MODEL_PATH=sys.argv[3]
-#if TFLITE_MODEL_PATH=='':
-TFLITE_MODEL_PATH = '../model/visual_wake_quant.tflite'
-
-# Print Parameters
-print("The annotation file is: ",ANNOTATION_FILE_PATH)
-print("The COCO Dataset is located at: ", COCO_PATH)
-
+ANNOTATION_FILE_PATH=args.vww_ann_file
+COCO_PATH=args.coco_dataset_path
+TFLITE_MODEL_PATH =args.tflite_model
 
 # Preprocessing Function
 def preprocess_image(image, scale_factor=0.875, central_crop=True, W_out=224, H_out=224):
