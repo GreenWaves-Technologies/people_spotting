@@ -18,7 +18,6 @@
 #include "vwwKernels.h"
 #include "gaplib/ImgIO.h"
 
-
 #define __XSTR(__s) __STR(__s)
 #define __STR(__s) #__s
 
@@ -33,6 +32,7 @@ typedef struct{
 AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 AT_HYPERRAM_T HyperRam;
 static uint32_t l3_buff;
+struct pi_device gpio_a1;
 
 struct pi_device ili;
 struct pi_device device;
@@ -90,13 +90,11 @@ void draw_text(struct pi_device *display, const char *str, unsigned posX, unsign
 
 static void RunNetwork(cluster_arg_t*arg)
 {
-  PRINTF("Running on cluster\n");
 #ifdef PERF
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
   __PREFIX(CNN)(arg->in,arg->out);
-  PRINTF("Runner completed\n");
 }
 
 int start()
@@ -116,10 +114,9 @@ int start()
     //Input image size
     PRINTF("Entering main controller\n");
     
-    #if !FREQ_FC==50
+    //PMU_set_voltage(1200,0);
     pi_freq_set(PI_FREQ_DOMAIN_FC,FREQ_FC*1000*1000);
-    #endif
-
+    
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -134,7 +131,6 @@ int start()
         printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
         pmsis_exit(-1);
     }
-
 
     PRINTF("Reading image\n");
     //Reading Image from Bridge
@@ -211,6 +207,14 @@ int start()
     pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
     #endif
 
+    #ifdef GPIO 
+    //GPIO A1 (A0 on board)
+    pi_pad_set_function(PI_PAD_12_A3_RF_PACTRL0, PI_PAD_12_A3_GPIO_A0_FUNC1);
+    pi_gpio_e gpio_out_a1 = PI_GPIO_A0_PAD_12_A3;
+    pi_gpio_flags_e cfg_flags = PI_GPIO_OUTPUT;
+    pi_gpio_pin_configure(&gpio_a1, gpio_out_a1, cfg_flags);
+    #endif
+
     int iter=1;
     do{
 
@@ -230,6 +234,9 @@ int start()
             arg.out=ResOut;
         #endif
     
+        #ifdef GPIO 
+        pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 1);
+        #endif
         // Execute the function "RunNetwork" on the cluster.
         pi_task_block(&wait_task);
         pi_cluster_send_task_to_cl_async(&cluster_dev, task,&wait_task);
@@ -237,6 +244,9 @@ int start()
         
         #ifndef FROM_CAMERA
         pi_task_wait_on(&wait_task);
+        #ifdef GPIO 
+        pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 0);
+        #endif
         float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
         float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
 
@@ -245,9 +255,6 @@ int start()
         } else {
             PRINTF("no person seen %f\n", person_not_seen);
         }
-        //Checks for jenkins:
-        if(ResOut[0] == 4982 && ResOut[1] ==  27785) { printf("Correct Results!\n");pmsis_exit(0);}
-        else { printf("Wrong Results!\n");pmsis_exit(-1);}
         #else
         buffer.data = arg.in;
         //Write to image to LCD while processing NN on cluster
@@ -285,7 +292,10 @@ int start()
         printf("\n");
     }
 #endif
-
+    //Checks for jenkins:
+    if(FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM)>0.8) { printf("Correct Results!\n");pmsis_exit(0);}
+    else { printf("Wrong Results!\n");pmsis_exit(-1);}
+        
     pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
     pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
     PRINTF("Ended\n");
