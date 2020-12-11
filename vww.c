@@ -207,11 +207,13 @@ int start()
     #endif
 
     #ifdef GPIO 
+    #ifdef __GAP8__
     //GPIO A1 (A0 on board)
     pi_pad_set_function(PI_PAD_12_A3_RF_PACTRL0, PI_PAD_12_A3_GPIO_A0_FUNC1);
     pi_gpio_e gpio_out_a1 = PI_GPIO_A0_PAD_12_A3;
     pi_gpio_flags_e cfg_flags = PI_GPIO_OUTPUT;
     pi_gpio_pin_configure(&gpio_a1, gpio_out_a1, cfg_flags);
+    #endif
     #endif
 
     int iter=1;
@@ -234,7 +236,9 @@ int start()
         #endif
     
         #ifdef GPIO 
+        #ifdef __GAP8__
         pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 1);
+        #endif
         #endif
         // Execute the function "RunNetwork" on the cluster.
         pi_task_block(&wait_task);
@@ -244,7 +248,9 @@ int start()
         #ifndef FROM_CAMERA
         pi_task_wait_on(&wait_task);
         #ifdef GPIO 
+        #ifdef __GAP8__
         pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 0);
+        #endif
         #endif
         float person_not_seen = FIX2FP(ResOut[0] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
         float person_seen = FIX2FP(ResOut[1] * S68_Op_output_1_OUT_QSCALE, S68_Op_output_1_OUT_QNORM);
