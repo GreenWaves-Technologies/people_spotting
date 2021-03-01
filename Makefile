@@ -69,8 +69,6 @@ MODEL_L3_CONST=hflash
 
 APP = vww
 APP_SRCS += $(MODEL_PREFIX).c $(MODEL_GEN_C) $(MODEL_COMMON_SRCS) $(CNN_LIB)
-APP_SRCS += $(GAP_LIB_PATH)/img_io/ImgIO.c
-APP_INC  += $(GAP_LIB_PATH)/include/
 
 APP_CFLAGS += -O3 -DPERF -DGPIO -s -mno-memcpy -fno-tree-loop-distribute-patterns 
 APP_CFLAGS += -I. -I$(MODEL_COMMON_INC) -I$(TILER_EMU_INC) -I$(TILER_INC) -I$(TILER_CNN_KERNEL_PATH) -I$(MODEL_BUILD) -I$(TILER_CNN_KERNEL_PATH_SQ8)

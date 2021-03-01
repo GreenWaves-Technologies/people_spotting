@@ -196,10 +196,11 @@ int start()
     task->arg = &arg;
     
     PRINTF("Constructor\n");
+    int construct_err = __PREFIX(CNN_Construct)();
     // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
-    if (__PREFIX(CNN_Construct)())
+    if (construct_err)
     {
-        printf("Graph constructor exited with an error\n");
+        printf("Graph constructor exited with an error: %d\n", construct_err);
         pmsis_exit(-1);
     }
 
@@ -214,6 +215,7 @@ int start()
 
     #ifdef GPIO 
     #ifdef __GAP8__
+    struct pi_device gpio_a1;
     //GPIO A1 (A0 on board)
     pi_pad_set_function(PI_PAD_12_A3_RF_PACTRL0, PI_PAD_12_A3_GPIO_A0_FUNC1);
     pi_gpio_e gpio_out_a1 = PI_GPIO_A0_PAD_12_A3;
@@ -227,7 +229,7 @@ int start()
 
         #ifndef FROM_CAMERA
             iter=0;
-            arg.in=Input_1;
+            arg.in= (short int *) Input_1;
             arg.out=ResOut;
         #else
             pi_task_wait_on(&task_1);
