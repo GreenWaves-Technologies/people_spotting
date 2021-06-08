@@ -112,15 +112,14 @@ int start()
     pi_task_t task_2;
     cluster_arg_t arg;
     pi_task_t wait_task;
+    float person_not_seen,person_seen;
     
     //Input image size
     PRINTF("Entering main controller\n");
     
-    //PMU_set_voltage(1200,0);
-    #if !FREQ_FC==50
+    PMU_set_voltage(1200,0);
     pi_freq_set(PI_FREQ_DOMAIN_FC,FREQ_FC*1000*1000);
-    #endif
-
+    
     //Allocating output
     ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
@@ -260,8 +259,8 @@ int start()
         pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 0);
         #endif
         #endif
-        float person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
-        float person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
 
         if (person_seen > person_not_seen) {
             PRINTF("person seen! confidence %f\n", person_seen);
@@ -269,24 +268,25 @@ int start()
             PRINTF("no person seen %f\n", person_not_seen);
         }
         //Checks for jenkins:
-        if(ResOut[0] == 4982 && ResOut[1] ==  27785) { printf("Correct Results!\n");break;}
-        else { printf("Wrong Results!\n");break;}
+        if(ResOut[0] == 4982 && ResOut[1] ==  27785) { printf("Correct Results!\n");}
+        else { printf("Wrong Results!\n"); pmsis_exit(-1);}
         #else
         buffer.data = arg.in;
+        pi_task_wait_on(&wait_task);
         //Write to image to LCD while processing NN on cluster
         pi_display_write(&ili, &buffer, 41,16, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
         //Wait Cluster to finish befor writing results to LCD
-        pi_task_wait_on(&wait_task);
-        float person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
-        float person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        
+        person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
         if (person_seen > person_not_seen) 
         {
-            sprintf(result_out,"Person seen (%f)",person_seen);
+            sprintf(result_out,"Person seen (%.2f)",person_seen);
             draw_text(&ili, result_out, 40, 225, 2);
         }
         else
         {
-            sprintf(result_out,"No person seen (%f)",person_not_seen);
+            sprintf(result_out,"No person seen (%.2f)",person_not_seen);
             draw_text(&ili, result_out, 40, 225, 2);
         }
         #endif
