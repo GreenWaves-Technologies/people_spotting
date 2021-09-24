@@ -270,8 +270,9 @@ int start()
             PRINTF("no person seen %f\n", person_not_seen);
         }
         //Checks for jenkins:
-        if(ResOut[0] == 4982 && ResOut[1] ==  27785) { printf("Correct Results!\n");}
-        else { printf("Wrong Results!\n"); pmsis_exit(-1);}
+        //Checks for jenkins:
+        if(FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
+        else { printf("Wrong Results!\n");pmsis_exit(-1);}
         #else
         buffer.data = arg.in;
         pi_task_wait_on(&wait_task);
@@ -310,9 +311,6 @@ int start()
         printf("\n");
     }
 #endif
-    //Checks for jenkins:
-    if(FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM)>0.8) { printf("Correct Results!\n");pmsis_exit(0);}
-    else { printf("Wrong Results!\n");pmsis_exit(-1);}
         
     pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
     pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
