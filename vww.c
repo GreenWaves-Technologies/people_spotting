@@ -118,7 +118,7 @@ int start()
     PRINTF("Entering main controller\n");
     
     #ifndef __GAP9__
-    PMU_set_voltage(1200,0);
+    pi_pmu_voltage_set(PI_PMU_DOMAIN_FC, 1200);
     #endif
     pi_freq_set(PI_FREQ_DOMAIN_FC,FREQ_FC*1000*1000);
     
