@@ -261,8 +261,8 @@ int start()
         pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 0);
         #endif
         #endif
-        person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
-        person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        person_not_seen = FIX2FP(ResOut[0] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
+        person_seen = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
 
         if (person_seen > person_not_seen) {
             PRINTF("person seen! confidence %f\n", person_seen);
@@ -271,7 +271,7 @@ int start()
         }
         //Checks for jenkins:
         //Checks for jenkins:
-        if(FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
+        if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
         else { printf("Wrong Results!\n");pmsis_exit(-1);}
         #else
         buffer.data = arg.in;
@@ -280,8 +280,8 @@ int start()
         pi_display_write(&ili, &buffer, 41,16, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
         //Wait Cluster to finish befor writing results to LCD
         
-        person_not_seen = FIX2FP(ResOut[0] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
-        person_seen = FIX2FP(ResOut[1] * S176_Op_output_1_OUT_QSCALE, S176_Op_output_1_OUT_QNORM);
+        person_not_seen = FIX2FP(ResOut[0] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
+        person_seen = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
         if (person_seen > person_not_seen) 
         {
             sprintf(result_out,"Person seen (%.2f)",person_seen);
