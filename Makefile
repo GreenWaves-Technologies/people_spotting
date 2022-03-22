@@ -44,10 +44,10 @@ CLUSTER_STACK_SIZE=4096
 # Cluster PE1-PE7 stack size:
 CLUSTER_SLAVE_STACK_SIZE=1024
 TOTAL_STACK_SIZE=$(shell expr $(CLUSTER_STACK_SIZE) \+ $(CLUSTER_SLAVE_STACK_SIZE) \* 7)
-ifeq '$(TARGET_CHIP_FAMILY)' 'GAP9'
-  FREQ_CL?=50
-  FREQ_FC?=50
-  MODEL_L1_MEMORY=$(shell expr 125000 \- $(TOTAL_STACK_SIZE))
+ifeq '$(TARGET_CHIP_FAMILY)' 'GAP9_V2'
+  FREQ_CL?=370
+  FREQ_FC?=370
+  MODEL_L1_MEMORY=$(shell expr 128000 \- $(TOTAL_STACK_SIZE))
   MODEL_L2_MEMORY=1300000
   MODEL_L3_MEMORY=8388608
 else
@@ -62,10 +62,14 @@ else
   MODEL_L3_MEMORY=8388608
 endif
 
-MODEL_L3_EXEC=hram
+#MODEL_L3_EXEC=hram
 # hflash - HyperBus Flash
 # qpsiflash - Quad SPI Flash
-MODEL_L3_CONST=hflash 
+#MODEL_L3_CONST=hflash 
+
+RAM_FLASH_TYPE ?= MRAM
+READFS_FLASH = target/chip/soc/mram
+READFS_FILES=$(abspath $(MODEL_TENSORS))
 
 APP = vww
 APP_SRCS += $(MODEL_PREFIX).c $(MODEL_GEN_C) $(MODEL_COMMON_SRCS) $(CNN_LIB)
@@ -86,9 +90,6 @@ endif
 ifeq ($(FROM_CAMERA),1)
   APP_CFLAGS += -DFROM_CAMERA=1
 endif
-
-READFS_FILES=$(abspath $(MODEL_TENSORS))
-PLPBRIDGE_FLAGS += -f
 
 # all depends on the model
 all:: model

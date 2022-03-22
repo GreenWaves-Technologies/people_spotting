@@ -30,8 +30,10 @@ typedef struct{
     unsigned short* out;
 } cluster_arg_t;
 
-AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
-AT_HYPERRAM_T HyperRam;
+
+struct pi_device OspiRam; 
+AT_OSPIFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
+
 static uint32_t l3_buff;
 
 struct pi_device ili;
