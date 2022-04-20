@@ -32,7 +32,7 @@ typedef struct{
 
 
 struct pi_device OspiRam; 
-AT_OSPIFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
+AT_HYPERFLASH_FS_EXT_ADDR_TYPE __PREFIX(_L3_Flash) = 0;
 
 static uint32_t l3_buff;
 
@@ -184,6 +184,7 @@ int start()
 #endif
 
     pi_cluster_conf_init(&conf);
+    conf.cc_stack_size = CLUSTER_STACK_SIZE;
     pi_open_from_conf(&cluster_dev, (void *)&conf);
     if (pi_cluster_open(&cluster_dev))
     {
@@ -192,11 +193,16 @@ int start()
     }
     
     task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
-    memset(task, 0, sizeof(struct pi_cluster_task));
+    pi_cluster_task(task, (void (*)(void *))&RunNetwork, &arg);
+    pi_cluster_task_stacks(task, NULL, CLUSTER_SLAVE_STACK_SIZE);
+    
+    #if defined(__GAP8__)
     task->entry = &RunNetwork;
     task->stack_size = CLUSTER_STACK_SIZE;
     task->slave_stack_size = CLUSTER_SLAVE_STACK_SIZE;
     task->arg = &arg;
+    #endif
+    
     
     PRINTF("Constructor\n");
     int construct_err = __PREFIX(CNN_Construct)();
