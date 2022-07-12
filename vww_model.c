@@ -133,9 +133,9 @@ int start()
     float person_seen = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
 
     if (person_seen > person_not_seen) {
-        PRINTF("person seen! confidence %f\n", person_seen);
+        printf("person seen! confidence %f\n", person_seen);
     } else {
-        PRINTF("no person seen %f\n", person_not_seen);
+        printf("no person seen %f\n", person_not_seen);
     }
   
   __PREFIX(CNN_Destruct)();
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
     #ifdef __EMUL__
     if (argc < 2)
     {
-      PRINTF("Usage: VWW MIT [image_file]\n");
+      printf("Usage: VWW MIT [image_file]\n");
       exit(-1);
     }
     ImageName = argv[1];
