@@ -97,12 +97,15 @@ static void RunNetwork(cluster_arg_t*arg)
   gap_cl_starttimer();
   gap_cl_resethwtimer();
 #endif
+    GPIO_HIGH();
   __PREFIX(CNN)(arg->in,arg->out);
+    GPIO_LOW();
   PRINTF("Runner completed\n");
 }
 
 int start()
 {
+    OPEN_GPIO_MEAS();
     char *ImageName = __XSTR(AT_IMAGE);
     struct pi_device cluster_dev;
     struct pi_cluster_task *task;
@@ -133,7 +136,7 @@ int start()
 
 #ifndef FROM_CAMERA
     //allocating input
-    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
+    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_SIZE);
     if (Input_1==0) {
         printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
         pmsis_exit(-1);
@@ -142,8 +145,9 @@ int start()
 
     PRINTF("Reading image\n");
     //Reading Image from Bridge
-     img_io_out_t type = IMGIO_OUTPUT_RGB565;
-    if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE*PIXEL_SIZE, type, 0)) {
+    // img_io_out_t type = IMGIO_OUTPUT_RGB565;
+    img_io_out_t type = IMGIO_OUTPUT_CHAR;
+    if (ReadImageFromFile(ImageName, AT_INPUT_WIDTH, AT_INPUT_HEIGHT, AT_INPUT_COLORS, Input_1, AT_INPUT_SIZE, type, 0)) {
         printf("Failed to load image %s\n", ImageName);
         pmsis_exit(-1);
     }
@@ -277,10 +281,6 @@ int start()
         } else {
             PRINTF("no person seen %f\n", person_not_seen);
         }
-        //Checks for jenkins:
-        //Checks for jenkins:
-        if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
-        else { printf("Wrong Results!\n");pmsis_exit(-1);}
         #else
         buffer.data = arg.in;
         pi_task_wait_on(&wait_task);
@@ -319,6 +319,9 @@ int start()
         printf("\n");
     }
 #endif
+    //Checks for jenkins:
+    if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
+    else { printf("Wrong Results!\n");pmsis_exit(-1);}
         
     pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
     pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);

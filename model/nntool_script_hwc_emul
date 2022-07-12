@@ -1,10 +1,7 @@
 set debug true
+qtune --step * hwc=True
 adjust
 fusions --scale8
-#set input_norm_func "x: x/128-1"
-
-imageformat input_1 rgb888 offset_int8
-#imageformat input_1 rgb565_rgb888 offset_int8
 
 set l2_ram_ext_managed false
 set graph_reorder_constant_in true
