@@ -128,7 +128,7 @@ int start()
     pi_freq_set(PI_FREQ_DOMAIN_FC,FREQ_FC*1000*1000);
     
     //Allocating output
-    ResOut = (short int *) pmsis_l2_malloc( 2*sizeof(short int));
+    ResOut = (short int *) pi_l2_malloc( 2*sizeof(short int));
     if (ResOut==0) {
         printf("Failed to allocate Memory for Result (%ld bytes)\n", 2*sizeof(short int));
         pmsis_exit(-1);
@@ -136,7 +136,7 @@ int start()
 
 #ifndef FROM_CAMERA
     //allocating input
-    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_SIZE);
+    Input_1 = (uint8_t*)pi_l2_malloc(AT_INPUT_SIZE);
     if (Input_1==0) {
         printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
         pmsis_exit(-1);
@@ -154,7 +154,7 @@ int start()
     PRINTF("Finished reading image\n");
 #else
     //Allocate double the buffer for double buffering
-    Input_1 = (uint8_t*)pmsis_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE *2);
+    Input_1 = (uint8_t*)pi_l2_malloc(AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE *2);
     if (Input_1==0) {
         printf("Failed to allocate Memory for input (%ld bytes)\n", AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE*2);
         pmsis_exit(-1);
@@ -196,7 +196,7 @@ int start()
         pmsis_exit(-7);
     }
     
-    task = pmsis_l2_malloc(sizeof(struct pi_cluster_task));
+    task = pi_l2_malloc(sizeof(struct pi_cluster_task));
     pi_cluster_task(task, (void (*)(void *))&RunNetwork, &arg);
     pi_cluster_task_stacks(task, NULL, CLUSTER_SLAVE_STACK_SIZE);
     
@@ -323,8 +323,8 @@ int start()
     if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
     else { printf("Wrong Results!\n");pmsis_exit(-1);}
         
-    pmsis_l2_malloc_free(ResOut, 2*sizeof(short int));
-    pmsis_l2_malloc_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
+    pi_l2_free(ResOut, 2*sizeof(short int));
+    pi_l2_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
     PRINTF("Ended\n");
     pmsis_exit(0);
     return 0;
