@@ -134,6 +134,15 @@ int start()
         pmsis_exit(-1);
     }
 
+    PRINTF("Constructor\n");
+    int construct_err = __PREFIX(CNN_Construct)();
+    // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
+    if (construct_err)
+    {
+        printf("Graph constructor exited with an error: %d\n", construct_err);
+        pmsis_exit(-1);
+    }
+
 #ifndef FROM_CAMERA
     //allocating input
     Input_1 = (uint8_t*)pi_l2_malloc(AT_INPUT_SIZE);
@@ -206,18 +215,6 @@ int start()
     task->slave_stack_size = CLUSTER_SLAVE_STACK_SIZE;
     task->arg = &arg;
     #endif
-    
-    
-    PRINTF("Constructor\n");
-    int construct_err = __PREFIX(CNN_Construct)();
-    // IMPORTANT - MUST BE CALLED AFTER THE CLUSTER IS SWITCHED ON!!!!
-    if (construct_err)
-    {
-        printf("Graph constructor exited with an error: %d\n", construct_err);
-        pmsis_exit(-1);
-    }
-
-    pi_freq_set(PI_FREQ_DOMAIN_CL,FREQ_CL*1000*1000);
 
     PRINTF("Application main cycle\n");
     #ifdef FROM_CAMERA
