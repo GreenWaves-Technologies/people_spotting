@@ -23,8 +23,8 @@ io=host
 
 $(info Building GAP8 mode with $(QUANT_BITS) bit quantization)
 
-FLASH_TYPE ?= HYPER
-RAM_TYPE   ?= HYPER
+FLASH_TYPE ?= DEFAULT
+RAM_TYPE   ?= DEFAULT
 
 ifeq '$(FLASH_TYPE)' 'HYPER'
   MODEL_L3_FLASH=AT_MEM_L3_HFLASH
