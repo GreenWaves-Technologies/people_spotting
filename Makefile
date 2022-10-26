@@ -23,8 +23,8 @@ io=host
 
 $(info Building GAP8 mode with $(QUANT_BITS) bit quantization)
 
-FLASH_TYPE ?= HYPER
-RAM_TYPE   ?= HYPER
+FLASH_TYPE ?= DEFAULT
+RAM_TYPE   ?= DEFAULT
 
 ifeq '$(FLASH_TYPE)' 'HYPER'
   MODEL_L3_FLASH=AT_MEM_L3_HFLASH
@@ -54,7 +54,7 @@ APP = vww
 APP_SRCS += vww_model.c $(MODEL_GEN_C) $(MODEL_COMMON_SRCS) $(CNN_LIB)
 
 APP_CFLAGS += -O3 -DPERF -s -mno-memcpy -fno-tree-loop-distribute-patterns 
-APP_CFLAGS += -I. -I$(MODEL_COMMON_INC) -I$(TILER_EMU_INC) -I$(TILER_INC) $(CNN_LIB_INCLUDE) -I$(MODEL_BUILD) -I$(TILER_CNN_KERNEL_PATH_SQ8)
+APP_CFLAGS += -I$(GAP_SDK_HOME)/utils/power_meas_utils -I. -I$(MODEL_COMMON_INC) -I$(TILER_EMU_INC) -I$(TILER_INC) $(CNN_LIB_INCLUDE) -I$(MODEL_BUILD) -I$(TILER_CNN_KERNEL_PATH_SQ8)
 APP_CFLAGS += -DAT_MODEL_PREFIX=$(MODEL_PREFIX) $(MODEL_SIZE_CFLAGS)
 APP_CFLAGS += -DCLUSTER_STACK_SIZE=$(CLUSTER_STACK_SIZE) -DCLUSTER_SLAVE_STACK_SIZE=$(CLUSTER_SLAVE_STACK_SIZE)
 APP_CFLAGS += -DAT_IMAGE=$(IMAGE) 
@@ -78,8 +78,8 @@ endif
 
 READFS_FILES=$(abspath $(MODEL_TENSORS))
 
-# all depends on the model
-all:: model
+# build depends on the model
+build:: model
 
 clean:: clean_model
 
