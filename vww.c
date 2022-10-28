@@ -113,10 +113,10 @@ int start()
     char result_out[30];
     unsigned int W = 238, H = 208;
     unsigned int Wcam=238, Hcam=208;
-    pi_task_t task_1;
-    pi_task_t task_2;
+    pi_event_t event_1;
+    pi_event_t event_2;
     cluster_arg_t arg;
-    pi_task_t wait_task;
+    pi_event_t wait_event;
     float person_not_seen,person_seen;
     
     //Input image size
@@ -218,8 +218,8 @@ int start()
 
     PRINTF("Application main cycle\n");
     #ifdef FROM_CAMERA
-    pi_camera_capture_async(&camera, Input_1, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
-    pi_camera_capture_async(&camera, Input_1+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
+    pi_camera_capture_async(&camera, Input_1, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_evt_sig_init(&event_1));
+    pi_camera_capture_async(&camera, Input_1+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_evt_sig_init(&event_2));
     pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
     #endif
 
@@ -242,12 +242,12 @@ int start()
             arg.in= (short int *) Input_1;
             arg.out=ResOut;
         #else
-            pi_task_wait_on(&task_1);
-            pi_task_wait_on(&task_2);
+            pi_evt_wait_on(&event_1);
+            pi_evt_wait_on(&event_2);
             pi_camera_control(&camera, PI_CAMERA_CMD_STOP, 0);
             //We need to calls since uDMA max transfer is 128KB
-            pi_camera_capture_async(&camera, Input_1 + (iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0), AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_1));
-            pi_camera_capture_async(&camera, Input_1+(iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0)+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_task_block(&task_2));
+            pi_camera_capture_async(&camera, Input_1 + (iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0), AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_evt_sig_init(&event_1));
+            pi_camera_capture_async(&camera, Input_1+(iter%2?AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2:0)+AT_INPUT_WIDTH*AT_INPUT_HEIGHT, AT_INPUT_WIDTH*AT_INPUT_HEIGHT,pi_evt_sig_init(&event_2));
             pi_camera_control(&camera, PI_CAMERA_CMD_START, 0);
             arg.in=Input_1+(iter%2?0:AT_INPUT_WIDTH*AT_INPUT_HEIGHT*2);
             arg.out=ResOut;
@@ -259,12 +259,12 @@ int start()
         #endif
         #endif
         // Execute the function "RunNetwork" on the cluster.
-        pi_task_block(&wait_task);
-        pi_cluster_send_task_to_cl_async(&cluster_dev, task,&wait_task);
+        pi_evt_sig_init(&wait_event);
+        pi_cluster_send_task_to_cl_async(&cluster_dev, task,&wait_event);
 
         
         #ifndef FROM_CAMERA
-        pi_task_wait_on(&wait_task);
+        pi_evt_wait_on(&wait_event);
         #ifdef GPIO 
         #ifdef __GAP8__
         pi_gpio_pin_write(&gpio_a1, gpio_out_a1, 0);
@@ -280,7 +280,7 @@ int start()
         }
         #else
         buffer.data = arg.in;
-        pi_task_wait_on(&wait_task);
+        pi_evt_wait_on(&wait_event);
         //Write to image to LCD while processing NN on cluster
         pi_display_write(&ili, &buffer, 41,16, AT_INPUT_WIDTH, AT_INPUT_HEIGHT);
         //Wait Cluster to finish befor writing results to LCD
