@@ -17,6 +17,7 @@ MODEL_SUFFIX = _SQ8
 TRAINED_MODEL=model/visual_wake_quant.tflite
 #LOAD A TFLITE QUANTIZED GRAPH
 NNTOOL_EXTRA_FLAGS= -q
+MODEL_EXPRESSIONS =BUILD_MODEL_SQ8/Expression_Kernels.c
 
 # Here we set the memory allocation for the generated kernels
 # REMEMBER THAT THE L1 MEMORY ALLOCATION MUST INCLUDE SPACE
