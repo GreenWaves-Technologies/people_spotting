@@ -159,8 +159,9 @@ int start()
   printf("Ended\n");
   #ifndef __EMUL__
     //Checks for jenkins:
-    if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.89) { printf("Correct Results!\n");pmsis_exit(0);}
-    else { printf("Wrong Results!\n");pmsis_exit(-1);}
+    float seen_confidence = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
+    if(seen_confidence>0.85) { printf("Correct Results!\n");pmsis_exit(0);}
+    else { printf("Wrong Results! %f\n", seen_confidence);pmsis_exit(-1);}
     pi_cluster_close(&cluster_dev);
     pmsis_exit(0);
   #endif

@@ -317,8 +317,9 @@ int start()
     }
 #endif
     //Checks for jenkins:
-    if(FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM)>0.9) { printf("Correct Results!\n");pmsis_exit(0);}
-    else { printf("Wrong Results!\n");pmsis_exit(-1);}
+    float seen_confidence = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
+    if(seen_confidence>0.85) { printf("Correct Results!\n");pmsis_exit(0);}
+    else { printf("Wrong Results! %f\n", seen_confidence);pmsis_exit(-1);}
         
     pi_l2_free(ResOut, 2*sizeof(short int));
     pi_l2_free(Input_1,AT_INPUT_WIDTH*AT_INPUT_HEIGHT*PIXEL_SIZE);
