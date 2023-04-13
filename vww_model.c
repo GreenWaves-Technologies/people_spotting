@@ -87,7 +87,7 @@ int start()
     struct pi_cluster_task *task = pi_l2_malloc(sizeof(struct pi_cluster_task));
     if(task==NULL) {
       printf("pi_cluster_task alloc Error!\n");
-      pmsis_exit(-1);
+      return -1;
     }
     pi_cluster_task(task, (void (*)(void *))&RunNetwork, NULL);
     pi_cluster_task_stacks(task, NULL, CLUSTER_SLAVE_STACK_SIZE);
@@ -160,10 +160,9 @@ int start()
   #ifndef __EMUL__
     //Checks for jenkins:
     float seen_confidence = FIX2FP(ResOut[1] * vww_Output_1_OUT_QSCALE, vww_Output_1_OUT_QNORM);
-    if(seen_confidence>0.85) { printf("Correct Results!\n");pmsis_exit(0);}
-    else { printf("Wrong Results! %f\n", seen_confidence);pmsis_exit(-1);}
+    if(seen_confidence>0.85) { printf("Correct Results!\n");return 0;}
+    else { printf("Wrong Results! %f\n", seen_confidence);return -1;}
     pi_cluster_close(&cluster_dev);
-    pmsis_exit(0);
   #endif
   return 0;
 }
@@ -181,7 +180,7 @@ int main(int argc, char *argv[])
     start();
     #else
     ImageName = __XSTR(AT_IMAGE);
-    return pmsis_kickoff((void *) start);
+    return start();
     #endif
     return 0;
 }
