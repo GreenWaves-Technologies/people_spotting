@@ -113,10 +113,10 @@ int start()
     char result_out[30];
     unsigned int W = 238, H = 208;
     unsigned int Wcam=238, Hcam=208;
-    pi_event_t event_1;
-    pi_event_t event_2;
+    pi_evt_t event_1;
+    pi_evt_t event_2;
     cluster_arg_t arg;
-    pi_event_t wait_event;
+    pi_evt_t wait_event;
     float person_not_seen,person_seen;
     
     //Input image size
